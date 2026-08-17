@@ -70,7 +70,7 @@ update = '''        void update(float dt,float h){
 '''
 s = s[:start] + update + s[end:]
 
-s = s.replace('drawPlane(c,l+w*.42f,planeY,w*.32f,pitch);', 'float sx=(float)Math.sin(world*.21f+1.1f)*w*.009f*shake; float sy=(float)Math.cos(world*.27f)*h*.012f*shake; drawPlane(c,l+w*.42f+sx,planeY+sy,w*.38f,pitch);')
+s = s.replace('drawPlane(c,l+w*.42f,planeY,w*.32f,pitch);', 'float planeShakeX=(float)Math.sin(world*.21f+1.1f)*w*.009f*shake; float planeShakeY=(float)Math.cos(world*.27f)*h*.012f*shake; drawPlane(c,l+w*.42f+planeShakeX,planeY+planeShakeY,w*.38f,pitch);')
 
 ds = s.index('        void drawPlane(Canvas c,float x,float y,float size,float ang){')
 de = s.index('        @Override public boolean onTouchEvent', ds)
