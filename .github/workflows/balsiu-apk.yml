@@ -24,12 +24,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Apply v1.19 changes
-        run: python3 build_v119.py
+      - name: Apply v1.20 changes
+        run: python3 build_v120.py
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: BalsiuLektuvas-v1.19-APK
+          name: BalsiuLektuvas-v1.20-APK
           path: balsiu-apk/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
