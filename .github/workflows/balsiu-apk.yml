@@ -24,6 +24,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Apply 80-90 dB flight logic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/lt/deikai/balsiulektuvas/MainActivity.java')
+          s = p.read_text()
+          s = s.replace('offset=(float)(75-(sum/count))', 'offset=(float)(85-(sum/count))')
+          s = s.replace('Kalibruoti 75 dB', 'Kalibruoti 85 dB')
+          s = s.replace('level<70?Color.rgb(255,171,49):(level<=80?Color.rgb(47,197,70):Color.rgb(241,75,67))', 'level<80?Color.rgb(255,171,49):(level<=90?Color.rgb(47,197,70):Color.rgb(241,75,67))')
+          s = s.replace('Tikslas 70–80 dB', 'Tikslas 80–90 dB')
+          s = s.replace('float meters=0,current=0,best=0; float planeY=0,vy=0,pitch=0,airspeed=0,engine=0,world=0;', 'float meters=0,current=0,best=0; float planeY=0,vy=0,pitch=0,airspeed=0,engine=0,world=0; boolean airborne=false;')
+          old = '''            float desired;if(db<70){desired=.25f+(db-45)/25f*.45f;message="Dar truputį garsiau";}else if(db<=80){desired=.72f+(db-70)/10f*.12f;message="Puiku! Skrendi teisingai!";}else{desired=Math.min(1f,.85f+(db-80)/25f*.15f);message="Per garsiai – tyliau";}\n            engine+=(desired-engine)*Math.min(1,2.8f*dt);float targetSpeed=35+engine*105;airspeed+=(targetSpeed-airspeed)*Math.min(1,1.8f*dt);\n            float targetY=h*.49f;if(db<70)targetY=h*.56f-(db-45)*h*.003f;else if(db<=80)targetY=h*.43f;else targetY=Math.max(h*.31f,h*.43f-(db-80)*h*.005f);\n            float err=targetY-planeY;float accel=err*1.2f-vy*1.8f;vy+=accel*dt;vy=Math.max(-h*.22f,Math.min(h*.22f,vy));planeY+=vy*dt;pitch+=(Math.max(-.12f,Math.min(.09f,-vy/h*2.4f))-pitch)*Math.min(1,3*dt);\n            meters+=airspeed*dt*.11f;world+=airspeed*dt;if(db>=70&&db<=80){current+=dt;best=Math.max(best,current);}else current=0;'''
+          new = '''            if(db<80){\n                current=0;\n                message="Garsiau – pakilimui reikia 80 dB";\n                engine+=(0.18f-engine)*Math.min(1,3.2f*dt);\n                airspeed+=(0-airspeed)*Math.min(1,3.5f*dt);\n                float groundY=h*.49f;\n                if(airborne){\n                    float err=groundY-planeY;\n                    float accel=err*1.6f-vy*2.0f;\n                    vy+=accel*dt;\n                    planeY+=vy*dt;\n                    pitch+=(0.06f-pitch)*Math.min(1,2.5f*dt);\n                    if(Math.abs(planeY-groundY)<h*.008f && Math.abs(vy)<h*.025f){planeY=groundY;vy=0;pitch=0;airborne=false;}\n                }else{planeY=groundY;vy=0;pitch=0;}\n                return;\n            }\n            airborne=true;\n            float desired;\n            if(db<=90){desired=.78f+(db-80)/10f*.10f;message="Puiku! Idealus skrydis!";}\n            else{desired=Math.min(1f,.90f+(db-90)/15f*.10f);message="Per garsiai – tyliau";}\n            engine+=(desired-engine)*Math.min(1,2.8f*dt);\n            float targetSpeed=55+engine*100;\n            airspeed+=(targetSpeed-airspeed)*Math.min(1,1.8f*dt);\n            float targetY=db<=90?h*.43f:Math.max(h*.31f,h*.43f-(db-90)*h*.006f);\n            float err=targetY-planeY;float accel=err*1.25f-vy*1.9f;vy+=accel*dt;vy=Math.max(-h*.22f,Math.min(h*.22f,vy));planeY+=vy*dt;pitch+=(Math.max(-.12f,Math.min(.09f,-vy/h*2.4f))-pitch)*Math.min(1,3*dt);\n            meters+=airspeed*dt*.11f;world+=airspeed*dt;if(db>=80&&db<=90){current+=dt;best=Math.max(best,current);}else current=0;'''
+          if old not in s:
+              raise SystemExit('Flight logic block not found')
+          s = s.replace(old, new)
+          s = s.replace('meters=current=best=0;airspeed=engine=vy=0;', 'meters=current=best=0;airspeed=engine=vy=0;airborne=false;')
+          p.write_text(s)
+          PY
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
