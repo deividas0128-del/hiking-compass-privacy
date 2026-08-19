@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - chatgpt/balsiu-lektuvas-apk-build
+    paths-ignore:
+      - 'balsiu-apk/releases/**'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -33,3 +38,13 @@ jobs:
           name: BalsiuLektuvas-v1.21-APK
           path: balsiu-apk/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Publish APK to branch
+        run: |
+          mkdir -p releases
+          cp app/build/outputs/apk/debug/app-debug.apk releases/BalsiuLektuvas-v1.21-debug.apk
+          cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add balsiu-apk/releases/BalsiuLektuvas-v1.21-debug.apk
+          git commit -m "Publish BalsiuLektuvas v1.21 APK [skip ci]" || exit 0
+          git push
