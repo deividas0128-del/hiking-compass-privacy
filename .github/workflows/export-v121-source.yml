@@ -1,0 +1,22 @@
+name: Export Balsiu v1.21 Source
+
+on:
+  pull_request:
+    branches:
+      - chatgpt/balsiu-lektuvas-apk-build
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: balsiu-apk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate v1.21 Java source
+        run: python3 build_v121.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BalsiuLektuvas-v1.21-generated-source
+          path: balsiu-apk/app/src/main/java/lt/deikai/balsiulektuvas/MainActivity.java
+          if-no-files-found: error
