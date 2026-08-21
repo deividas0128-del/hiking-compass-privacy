@@ -1,0 +1,899 @@
+--- around line 73 ---
+68:     }
+69: 
+70:     class FlightView extends View {
+71:         final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+72:         final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+73:         final RectF rf = new RectF();
+74:         final String[] vowels = {"A","E","Ė","I","O","U"};
+75:         final SharedPreferences prefs;
+76:         final ArrayList<FlightRecord> records = new ArrayList<>();
+77: 
+78:         int vowel = 0;
+79:         volatile float micDb = 0f;
+80:         volatile float rawDb = -90f;
+81:         float db = 0f, filtered = 0f;
+82:         float calibrationOffset;
+83:         volatile boolean calibrating = false;
+84:         volatile long calibrationStarted = 0;
+85:         volatile double calibrationSum = 0;
+
+--- around line 82 ---
+77: 
+78:         int vowel = 0;
+79:         volatile float micDb = 0f;
+80:         volatile float rawDb = -90f;
+81:         float db = 0f, filtered = 0f;
+82:         float calibrationOffset;
+83:         volatile boolean calibrating = false;
+84:         volatile long calibrationStarted = 0;
+85:         volatile double calibrationSum = 0;
+86:         volatile int calibrationCount = 0;
+87:         AudioRecord recorder;
+88:         Thread micThread;
+89:         volatile boolean micRunning = false;
+90:         boolean micOn = true;
+91: 
+92:         float planeY = 0f, vy = 0f, pitch = 0f, airspeed = 0f, engine = 0f, world = 0f, shake = 0f;
+93:         float meters = 0f, flightTime = 0f;
+94:         float lastResultMeters = 0f, lastResultTime = 0f;
+
+--- around line 99 ---
+94:         float lastResultMeters = 0f, lastResultTime = 0f;
+95:         boolean flightStarted = false, landing = false, showResults = false;
+96:         long lastFrame = System.nanoTime();
+97:         String message = "Tark AAAAA…";
+98: 
+99:         RectF gearBtn = new RectF(), trophyBtn = new RectF();
+100:         RectF closeBtn = new RectF(), calBtn = new RectF(), micBtn = new RectF();
+101:         RectF[] vowelBtns = new RectF[6];
+102:         RectF[] tabBtns = new RectF[3];
+103:         RectF restartBtn = new RectF();
+104:         int panel = 0; // 0 none, 1 settings, 2 leaderboard
+105:         int leaderboardTab = 0; // day, week, month
+106: 
+107:         FlightView(Context c) {
+108:             super(c);
+109:             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+110:             prefs = c.getSharedPreferences("flight_prefs", MODE_PRIVATE);
+111:             calibrationOffset = prefs.getFloat("calibration_offset", 105f);
+
+--- around line 100 ---
+95:         boolean flightStarted = false, landing = false, showResults = false;
+96:         long lastFrame = System.nanoTime();
+97:         String message = "Tark AAAAA…";
+98: 
+99:         RectF gearBtn = new RectF(), trophyBtn = new RectF();
+100:         RectF closeBtn = new RectF(), calBtn = new RectF(), micBtn = new RectF();
+101:         RectF[] vowelBtns = new RectF[6];
+102:         RectF[] tabBtns = new RectF[3];
+103:         RectF restartBtn = new RectF();
+104:         int panel = 0; // 0 none, 1 settings, 2 leaderboard
+105:         int leaderboardTab = 0; // day, week, month
+106: 
+107:         FlightView(Context c) {
+108:             super(c);
+109:             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+110:             prefs = c.getSharedPreferences("flight_prefs", MODE_PRIVATE);
+111:             calibrationOffset = prefs.getFloat("calibration_offset", 105f);
+112:             vowel = prefs.getInt("vowel", 0);
+
+--- around line 101 ---
+96:         long lastFrame = System.nanoTime();
+97:         String message = "Tark AAAAA…";
+98: 
+99:         RectF gearBtn = new RectF(), trophyBtn = new RectF();
+100:         RectF closeBtn = new RectF(), calBtn = new RectF(), micBtn = new RectF();
+101:         RectF[] vowelBtns = new RectF[6];
+102:         RectF[] tabBtns = new RectF[3];
+103:         RectF restartBtn = new RectF();
+104:         int panel = 0; // 0 none, 1 settings, 2 leaderboard
+105:         int leaderboardTab = 0; // day, week, month
+106: 
+107:         FlightView(Context c) {
+108:             super(c);
+109:             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+110:             prefs = c.getSharedPreferences("flight_prefs", MODE_PRIVATE);
+111:             calibrationOffset = prefs.getFloat("calibration_offset", 105f);
+112:             vowel = prefs.getInt("vowel", 0);
+113:             loadRecords();
+
+--- around line 102 ---
+97:         String message = "Tark AAAAA…";
+98: 
+99:         RectF gearBtn = new RectF(), trophyBtn = new RectF();
+100:         RectF closeBtn = new RectF(), calBtn = new RectF(), micBtn = new RectF();
+101:         RectF[] vowelBtns = new RectF[6];
+102:         RectF[] tabBtns = new RectF[3];
+103:         RectF restartBtn = new RectF();
+104:         int panel = 0; // 0 none, 1 settings, 2 leaderboard
+105:         int leaderboardTab = 0; // day, week, month
+106: 
+107:         FlightView(Context c) {
+108:             super(c);
+109:             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+110:             prefs = c.getSharedPreferences("flight_prefs", MODE_PRIVATE);
+111:             calibrationOffset = prefs.getFloat("calibration_offset", 105f);
+112:             vowel = prefs.getInt("vowel", 0);
+113:             loadRecords();
+114:             p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+
+--- around line 103 ---
+98: 
+99:         RectF gearBtn = new RectF(), trophyBtn = new RectF();
+100:         RectF closeBtn = new RectF(), calBtn = new RectF(), micBtn = new RectF();
+101:         RectF[] vowelBtns = new RectF[6];
+102:         RectF[] tabBtns = new RectF[3];
+103:         RectF restartBtn = new RectF();
+104:         int panel = 0; // 0 none, 1 settings, 2 leaderboard
+105:         int leaderboardTab = 0; // day, week, month
+106: 
+107:         FlightView(Context c) {
+108:             super(c);
+109:             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+110:             prefs = c.getSharedPreferences("flight_prefs", MODE_PRIVATE);
+111:             calibrationOffset = prefs.getFloat("calibration_offset", 105f);
+112:             vowel = prefs.getInt("vowel", 0);
+113:             loadRecords();
+114:             p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+115:             stroke.setStyle(Paint.Style.STROKE);
+
+--- around line 104 ---
+99:         RectF gearBtn = new RectF(), trophyBtn = new RectF();
+100:         RectF closeBtn = new RectF(), calBtn = new RectF(), micBtn = new RectF();
+101:         RectF[] vowelBtns = new RectF[6];
+102:         RectF[] tabBtns = new RectF[3];
+103:         RectF restartBtn = new RectF();
+104:         int panel = 0; // 0 none, 1 settings, 2 leaderboard
+105:         int leaderboardTab = 0; // day, week, month
+106: 
+107:         FlightView(Context c) {
+108:             super(c);
+109:             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+110:             prefs = c.getSharedPreferences("flight_prefs", MODE_PRIVATE);
+111:             calibrationOffset = prefs.getFloat("calibration_offset", 105f);
+112:             vowel = prefs.getInt("vowel", 0);
+113:             loadRecords();
+114:             p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+115:             stroke.setStyle(Paint.Style.STROKE);
+116:             stroke.setStrokeCap(Paint.Cap.ROUND);
+
+--- around line 111 ---
+106: 
+107:         FlightView(Context c) {
+108:             super(c);
+109:             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+110:             prefs = c.getSharedPreferences("flight_prefs", MODE_PRIVATE);
+111:             calibrationOffset = prefs.getFloat("calibration_offset", 105f);
+112:             vowel = prefs.getInt("vowel", 0);
+113:             loadRecords();
+114:             p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+115:             stroke.setStyle(Paint.Style.STROKE);
+116:             stroke.setStrokeCap(Paint.Cap.ROUND);
+117:             stroke.setStrokeJoin(Paint.Join.ROUND);
+118:             setFocusable(true);
+119:         }
+120: 
+121:         void ensureMic() {
+122:             if (!micOn) return;
+123:             if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+
+--- around line 157 ---
+152:                     double sum = 0;
+153:                     for (int i = 0; i < n; i++) { double v = buf[i]; sum += v * v; }
+154:                     double rms = Math.sqrt(sum / n);
+155:                     float rdb = rms > 0 ? (float)(20.0 * Math.log10(rms / 32768.0)) : -90f;
+156:                     rawDb = rdb;
+157:                     float game = Math.max(0f, Math.min(110f, rdb + calibrationOffset));
+158:                     micDb = game;
+159:                     if (calibrating) {
+160:                         calibrationSum += rdb;
+161:                         calibrationCount++;
+162:                         if (System.currentTimeMillis() - calibrationStarted >= 1800) {
+163:                             if (calibrationCount > 3) {
+164:                                 calibrationOffset = 85f - (float)(calibrationSum / calibrationCount);
+165:                                 prefs.edit().putFloat("calibration_offset", calibrationOffset).apply();
+166:                             }
+167:                             calibrating = false;
+168:                         }
+169:                     }
+
+--- around line 164 ---
+159:                     if (calibrating) {
+160:                         calibrationSum += rdb;
+161:                         calibrationCount++;
+162:                         if (System.currentTimeMillis() - calibrationStarted >= 1800) {
+163:                             if (calibrationCount > 3) {
+164:                                 calibrationOffset = 85f - (float)(calibrationSum / calibrationCount);
+165:                                 prefs.edit().putFloat("calibration_offset", calibrationOffset).apply();
+166:                             }
+167:                             calibrating = false;
+168:                         }
+169:                     }
+170:                 }
+171:             }, "MicReader");
+172:             micThread.start();
+173:         }
+174: 
+175:         AudioRecord createRecorder(int source, int sr, int size) {
+176:             try { return new AudioRecord(source, sr, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, size); }
+
+--- around line 165 ---
+160:                         calibrationSum += rdb;
+161:                         calibrationCount++;
+162:                         if (System.currentTimeMillis() - calibrationStarted >= 1800) {
+163:                             if (calibrationCount > 3) {
+164:                                 calibrationOffset = 85f - (float)(calibrationSum / calibrationCount);
+165:                                 prefs.edit().putFloat("calibration_offset", calibrationOffset).apply();
+166:                             }
+167:                             calibrating = false;
+168:                         }
+169:                     }
+170:                 }
+171:             }, "MicReader");
+172:             micThread.start();
+173:         }
+174: 
+175:         AudioRecord createRecorder(int source, int sr, int size) {
+176:             try { return new AudioRecord(source, sr, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, size); }
+177:             catch (Exception e) { return null; }
+
+--- around line 223 ---
+218:             float dt = Math.min(.033f, (now - lastFrame) / 1_000_000_000f);
+219:             lastFrame = now;
+220:             update(dt, w, h);
+221:             drawScene(c, w, h);
+222:             drawHud(c, w, h);
+223:             if (panel == 1) drawSettings(c, w, h);
+224:             else if (panel == 2) drawLeaderboard(c, w, h);
+225:             if (showResults) drawResults(c, w, h);
+226:             postInvalidateOnAnimation();
+227:         }
+228: 
+229:         void update(float dt, float w, float h) {
+230:             float groundY = groundPlaneY(w, h);
+231:             float target = (micOn && micRunning) ? micDb : 0f;
+232:             float filterK = target > filtered ? 8f : 4f;
+233:             filtered += (target - filtered) * Math.min(1f, filterK * dt);
+234:             db = filtered;
+235:             shake += (0f - shake) * Math.min(1f, 5.5f * dt);
+
+--- around line 398 ---
+393:             c.drawRect(0, rt, w, h, p);
+394:             p.setColor(Color.rgb(105, 113, 120));
+395:             c.drawRect(0, rt, w, rt + h * .018f, p);
+396:             p.setColor(Color.rgb(245, 245, 245));
+397:             float dashW = w * .16f, gap = w * .10f;
+398:             float dashOffset = (world * .85f) % (dashW + gap);
+399:             for (float x = -dashW - dashOffset; x < w + dashW; x += dashW + gap) {
+400:                 c.drawRoundRect(new RectF(x, rt + h * .085f, x + dashW, rt + h * .098f), h * .006f, h * .006f, p);
+401:             }
+402: 
+403:             float px = w * .47f;
+404:             float py = planeY;
+405:             float ps = planeSize(w);
+406:             float sx = (float)Math.sin(world * .21f + 1.1f) * w * .006f * shake;
+407:             float sy = (float)Math.cos(world * .27f) * h * .008f * shake;
+408: 
+409:             if (airspeed > 65f && flightStarted && !showResults) {
+410:                 p.setColor(Color.argb((int)clamp(airspeed - 45f, 20f, 75f), 255, 255, 255));
+
+--- around line 399 ---
+394:             p.setColor(Color.rgb(105, 113, 120));
+395:             c.drawRect(0, rt, w, rt + h * .018f, p);
+396:             p.setColor(Color.rgb(245, 245, 245));
+397:             float dashW = w * .16f, gap = w * .10f;
+398:             float dashOffset = (world * .85f) % (dashW + gap);
+399:             for (float x = -dashW - dashOffset; x < w + dashW; x += dashW + gap) {
+400:                 c.drawRoundRect(new RectF(x, rt + h * .085f, x + dashW, rt + h * .098f), h * .006f, h * .006f, p);
+401:             }
+402: 
+403:             float px = w * .47f;
+404:             float py = planeY;
+405:             float ps = planeSize(w);
+406:             float sx = (float)Math.sin(world * .21f + 1.1f) * w * .006f * shake;
+407:             float sy = (float)Math.cos(world * .27f) * h * .008f * shake;
+408: 
+409:             if (airspeed > 65f && flightStarted && !showResults) {
+410:                 p.setColor(Color.argb((int)clamp(airspeed - 45f, 20f, 75f), 255, 255, 255));
+411:                 for (int i = 0; i < 7; i++) {
+
+--- around line 400 ---
+395:             c.drawRect(0, rt, w, rt + h * .018f, p);
+396:             p.setColor(Color.rgb(245, 245, 245));
+397:             float dashW = w * .16f, gap = w * .10f;
+398:             float dashOffset = (world * .85f) % (dashW + gap);
+399:             for (float x = -dashW - dashOffset; x < w + dashW; x += dashW + gap) {
+400:                 c.drawRoundRect(new RectF(x, rt + h * .085f, x + dashW, rt + h * .098f), h * .006f, h * .006f, p);
+401:             }
+402: 
+403:             float px = w * .47f;
+404:             float py = planeY;
+405:             float ps = planeSize(w);
+406:             float sx = (float)Math.sin(world * .21f + 1.1f) * w * .006f * shake;
+407:             float sy = (float)Math.cos(world * .27f) * h * .008f * shake;
+408: 
+409:             if (airspeed > 65f && flightStarted && !showResults) {
+410:                 p.setColor(Color.argb((int)clamp(airspeed - 45f, 20f, 75f), 255, 255, 255));
+411:                 for (int i = 0; i < 7; i++) {
+412:                     float y = h * (.22f + i * .072f) + (float)Math.sin(world * .01f + i) * h * .008f;
+
+--- around line 414 ---
+409:             if (airspeed > 65f && flightStarted && !showResults) {
+410:                 p.setColor(Color.argb((int)clamp(airspeed - 45f, 20f, 75f), 255, 255, 255));
+411:                 for (int i = 0; i < 7; i++) {
+412:                     float y = h * (.22f + i * .072f) + (float)Math.sin(world * .01f + i) * h * .008f;
+413:                     float x = ((i * w * .19f - world * 1.4f) % (w * 1.4f) + w * 1.4f) % (w * 1.4f) - w * .2f;
+414:                     c.drawRoundRect(new RectF(x, y, x + w * .12f, y + h * .003f), h * .002f, h * .002f, p);
+415:                 }
+416:             }
+417: 
+418:             // Animated rear-engine smoke / exhaust. It grows and fades with thrust and airspeed.
+419:             if (engine > .12f && flightStarted && !showResults) {
+420:                 float exhaustX = px - ps * .385f;
+421:                 float exhaustY = py + ps * .018f;
+422:                 float smokePower = clamp(.30f + engine * .78f + airspeed / 220f, .35f, 1.18f);
+423:                 for (int i = 0; i < 11; i++) {
+424:                     float smokeT = i / 10f;
+425:                     float ex = exhaustX - ps * (.018f + smokeT * .36f);
+426:                     float ey = exhaustY
+
+--- around line 436 ---
+431:                     int alpha = (int)(118f * (1f - smokeT) * smokePower);
+432:                     alpha = Math.max(0, Math.min(135, alpha));
+433:                     int shade = 248 - Math.min(30, i * 3);
+434:                     p.setShader(null);
+435:                     p.setColor(Color.argb(alpha, shade, shade, shade));
+436:                     c.drawOval(new RectF(ex-rx, ey-ry, ex+rx*1.65f, ey+ry), p);
+437:                 }
+438:                 // Dense exhaust core immediately behind the single rear jet engine.
+439:                 for (int i = 0; i < 4; i++) {
+440:                     float ex = exhaustX - ps * (.010f + i * .026f);
+441:                     float ey = exhaustY + (float)Math.cos(world * .055f + i) * ps * .005f;
+442:                     int alpha = (int)(92f * smokePower);
+443:                     p.setColor(Color.argb(Math.min(120, alpha), 245, 245, 245));
+444:                     c.drawCircle(ex, ey, ps * (.011f + i * .0035f), p);
+445:                 }
+446:             }
+447: 
+448:             drawPlane(c, px + sx, py + sy, ps, pitch, w, h);
+
+--- around line 458 ---
+453:             while (x > getWidth() + s * 2) x -= getWidth() + s * 4;
+454:             p.setColor(Color.argb(210, 255, 255, 255));
+455:             c.drawCircle(x, y, s * .32f, p);
+456:             c.drawCircle(x + s * .30f, y - s * .12f, s * .38f, p);
+457:             c.drawCircle(x + s * .62f, y, s * .30f, p);
+458:             c.drawRoundRect(new RectF(x - s * .18f, y, x + s * .82f, y + s * .30f), s * .16f, s * .16f, p);
+459:         }
+460: 
+461:         void drawTree(Canvas c, float x, float y, float s) {
+462:             p.setColor(Color.rgb(107, 76, 48));
+463:             c.drawRect(x - s * .10f, y, x + s * .10f, y + s * .85f, p);
+464:             p.setColor(Color.rgb(49, 137, 67));
+465:             c.drawCircle(x, y - s * .18f, s * .55f, p);
+466:             c.drawCircle(x - s * .34f, y + s * .02f, s * .42f, p);
+467:             c.drawCircle(x + s * .34f, y + s * .02f, s * .42f, p);
+468:         }
+469: 
+470:         void drawHouse(Canvas c, float x, float y, float s) {
+
+--- around line 494 ---
+489:             float altitude = Math.max(0f, groundY - planeY);
+490:             int shadowAlpha = (int)clamp(42f - altitude / Math.max(1f, h * .30f) * 25f, 13f, 42f);
+491:             p.setShader(null);
+492:             p.setColor(Color.argb(shadowAlpha, 24, 39, 52));
+493:             float shadowStretch = 1f + clamp(altitude / Math.max(1f, h * .35f), 0f, .65f);
+494:             c.drawOval(new RectF(-98*z*shadowStretch, 42*z, 104*z*shadowStretch, 55*z), p);
+495: 
+496:             Paint.Style oldStyle = stroke.getStyle();
+497:             Paint.Cap oldCap = stroke.getStrokeCap();
+498:             Paint.Join oldJoin = stroke.getStrokeJoin();
+499:             stroke.setStyle(Paint.Style.STROKE);
+500:             stroke.setStrokeCap(Paint.Cap.ROUND);
+501:             stroke.setStrokeJoin(Paint.Join.ROUND);
+502:             stroke.setStrokeWidth(2.0f*z);
+503:             stroke.setColor(Color.rgb(70, 88, 104));
+504: 
+505:             Path body = new Path();
+506:             body.moveTo(-151*z, 0);
+
+--- around line 572 ---
+567:                     Color.rgb(250,251,252), Color.rgb(198,207,216), Shader.TileMode.CLAMP));
+568:             c.drawPath(enginePod,p);
+569:             p.setShader(null);
+570:             c.drawPath(enginePod,stroke);
+571:             p.setColor(Color.rgb(86,99,110));
+572:             c.drawOval(new RectF(-148*z,5*z,-138*z,20*z),p);
+573:             p.setColor(Color.rgb(35,42,49));
+574:             c.drawCircle(-79*z, 8*z, 12*z,p);
+575:             p.setColor(Color.rgb(10,15,20));
+576:             c.drawCircle(-79*z, 8*z, 7*z,p);
+577:             p.setColor(Color.rgb(146,158,169));
+578:             c.drawCircle(-83*z, 6*z, 3.2f*z,p);
+579: 
+580:             Path tailWing = new Path();
+581:             tailWing.moveTo(-120*z, 16*z);
+582:             tailWing.lineTo(-151*z, 31*z);
+583:             tailWing.lineTo(-94*z, 29*z);
+584:             tailWing.lineTo(-62*z, 17*z);
+
+--- around line 633 ---
+628:             c.drawLine(116*z,-15*z,126*z,-4*z,stroke);
+629: 
+630:             p.setColor(Color.rgb(7,92,174));
+631:             for(int i=0;i<8;i++){
+632:                 float wx=(-48+i*19)*z;
+633:                 c.drawRoundRect(new RectF(wx,-10*z,wx+7*z,2*z),3.5f*z,3.5f*z,p);
+634:             }
+635:             p.setColor(Color.argb(88,255,255,255));
+636:             c.drawOval(new RectF(-25*z,-18*z,68*z,-6*z),p);
+637: 
+638:             p.setColor(Color.rgb(231,63,55)); c.drawCircle(-81*z,54*z,1.7f*z,p);
+639:             p.setColor(Color.rgb(45,216,96)); c.drawCircle(75*z,20*z,1.7f*z,p);
+640: 
+641:             if (gearDown) {
+642:                 stroke.setStrokeWidth(3.0f*z);
+643:                 stroke.setColor(Color.rgb(94,108,121));
+644:                 for(float gx:new float[]{-18f,82f}){
+645:                     c.drawLine(gx*z,25*z,gx*z,39*z,stroke);
+
+--- around line 636 ---
+631:             for(int i=0;i<8;i++){
+632:                 float wx=(-48+i*19)*z;
+633:                 c.drawRoundRect(new RectF(wx,-10*z,wx+7*z,2*z),3.5f*z,3.5f*z,p);
+634:             }
+635:             p.setColor(Color.argb(88,255,255,255));
+636:             c.drawOval(new RectF(-25*z,-18*z,68*z,-6*z),p);
+637: 
+638:             p.setColor(Color.rgb(231,63,55)); c.drawCircle(-81*z,54*z,1.7f*z,p);
+639:             p.setColor(Color.rgb(45,216,96)); c.drawCircle(75*z,20*z,1.7f*z,p);
+640: 
+641:             if (gearDown) {
+642:                 stroke.setStrokeWidth(3.0f*z);
+643:                 stroke.setColor(Color.rgb(94,108,121));
+644:                 for(float gx:new float[]{-18f,82f}){
+645:                     c.drawLine(gx*z,25*z,gx*z,39*z,stroke);
+646:                     p.setColor(Color.rgb(24,27,30));
+647:                     c.drawCircle(gx*z,45*z,9*z,p);
+648:                     p.setColor(Color.rgb(190,201,210));
+
+--- around line 691 ---
+686:             text(c,String.format(Locale.US,"%.0f m",meters),w/2,mt+mh*.75f,w*.060f,Color.rgb(16,80,151),Paint.Align.CENTER,true);
+687: 
+688:             if (!showResults && panel==0) {
+689:                 p.setColor(Color.argb(165,0,49,88));
+690:                 float msgW=w*.58f, msgH=w*.075f, mx=(w-msgW)/2, my=h*.70f;
+691:                 c.drawRoundRect(new RectF(mx,my,mx+msgW,my+msgH),msgH/2,msgH/2,p);
+692:                 text(c,message,w/2,my+msgH*.66f,w*.031f,Color.WHITE,Paint.Align.CENTER,true);
+693:             }
+694:         }
+695: 
+696:         void drawHudPill(Canvas c,float l,float t,float r,float b){
+697:             p.setColor(Color.argb(222,255,255,255)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,p);
+698:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(1.2f); stroke.setColor(Color.argb(75,40,82,112)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,stroke); stroke.setStyle(Paint.Style.FILL);
+699:         }
+700: 
+701:         void drawGlassButton(Canvas c,RectF b,boolean gear){
+702:             p.setShadowLayer(b.width()*.10f,0,b.width()*.04f,Color.argb(60,0,0,0));
+703:             p.setColor(Color.argb(225,255,255,255)); c.drawRoundRect(b,b.width()*.25f,b.width()*.25f,p); p.clearShadowLayer();
+
+--- around line 697 ---
+692:                 text(c,message,w/2,my+msgH*.66f,w*.031f,Color.WHITE,Paint.Align.CENTER,true);
+693:             }
+694:         }
+695: 
+696:         void drawHudPill(Canvas c,float l,float t,float r,float b){
+697:             p.setColor(Color.argb(222,255,255,255)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,p);
+698:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(1.2f); stroke.setColor(Color.argb(75,40,82,112)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,stroke); stroke.setStyle(Paint.Style.FILL);
+699:         }
+700: 
+701:         void drawGlassButton(Canvas c,RectF b,boolean gear){
+702:             p.setShadowLayer(b.width()*.10f,0,b.width()*.04f,Color.argb(60,0,0,0));
+703:             p.setColor(Color.argb(225,255,255,255)); c.drawRoundRect(b,b.width()*.25f,b.width()*.25f,p); p.clearShadowLayer();
+704:             if(gear) drawGearIcon(c,b.centerX(),b.centerY(),b.width()*.28f); else drawTrophyIcon(c,b.centerX(),b.centerY(),b.width()*.28f);
+705:         }
+706: 
+707:         void drawGearIcon(Canvas c,float x,float y,float r){
+708:             p.setColor(Color.rgb(35,103,167));
+709:             c.save(); c.translate(x,y);
+
+--- around line 698 ---
+693:             }
+694:         }
+695: 
+696:         void drawHudPill(Canvas c,float l,float t,float r,float b){
+697:             p.setColor(Color.argb(222,255,255,255)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,p);
+698:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(1.2f); stroke.setColor(Color.argb(75,40,82,112)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,stroke); stroke.setStyle(Paint.Style.FILL);
+699:         }
+700: 
+701:         void drawGlassButton(Canvas c,RectF b,boolean gear){
+702:             p.setShadowLayer(b.width()*.10f,0,b.width()*.04f,Color.argb(60,0,0,0));
+703:             p.setColor(Color.argb(225,255,255,255)); c.drawRoundRect(b,b.width()*.25f,b.width()*.25f,p); p.clearShadowLayer();
+704:             if(gear) drawGearIcon(c,b.centerX(),b.centerY(),b.width()*.28f); else drawTrophyIcon(c,b.centerX(),b.centerY(),b.width()*.28f);
+705:         }
+706: 
+707:         void drawGearIcon(Canvas c,float x,float y,float r){
+708:             p.setColor(Color.rgb(35,103,167));
+709:             c.save(); c.translate(x,y);
+710:             for(int i=0;i<8;i++){ c.save(); c.rotate(i*45); c.drawRoundRect(new RectF(-r*.18f,-r*1.28f,r*.18f,-r*.78f),r*.09f,r*.09f,p); c.restore(); }
+
+--- around line 701 ---
+696:         void drawHudPill(Canvas c,float l,float t,float r,float b){
+697:             p.setColor(Color.argb(222,255,255,255)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,p);
+698:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(1.2f); stroke.setColor(Color.argb(75,40,82,112)); c.drawRoundRect(new RectF(l,t,r,b),(b-t)*.28f,(b-t)*.28f,stroke); stroke.setStyle(Paint.Style.FILL);
+699:         }
+700: 
+701:         void drawGlassButton(Canvas c,RectF b,boolean gear){
+702:             p.setShadowLayer(b.width()*.10f,0,b.width()*.04f,Color.argb(60,0,0,0));
+703:             p.setColor(Color.argb(225,255,255,255)); c.drawRoundRect(b,b.width()*.25f,b.width()*.25f,p); p.clearShadowLayer();
+704:             if(gear) drawGearIcon(c,b.centerX(),b.centerY(),b.width()*.28f); else drawTrophyIcon(c,b.centerX(),b.centerY(),b.width()*.28f);
+705:         }
+706: 
+707:         void drawGearIcon(Canvas c,float x,float y,float r){
+708:             p.setColor(Color.rgb(35,103,167));
+709:             c.save(); c.translate(x,y);
+710:             for(int i=0;i<8;i++){ c.save(); c.rotate(i*45); c.drawRoundRect(new RectF(-r*.18f,-r*1.28f,r*.18f,-r*.78f),r*.09f,r*.09f,p); c.restore(); }
+711:             c.drawCircle(0,0,r,p); p.setColor(Color.WHITE); c.drawCircle(0,0,r*.43f,p); c.restore();
+712:         }
+713: 
+
+--- around line 710 ---
+705:         }
+706: 
+707:         void drawGearIcon(Canvas c,float x,float y,float r){
+708:             p.setColor(Color.rgb(35,103,167));
+709:             c.save(); c.translate(x,y);
+710:             for(int i=0;i<8;i++){ c.save(); c.rotate(i*45); c.drawRoundRect(new RectF(-r*.18f,-r*1.28f,r*.18f,-r*.78f),r*.09f,r*.09f,p); c.restore(); }
+711:             c.drawCircle(0,0,r,p); p.setColor(Color.WHITE); c.drawCircle(0,0,r*.43f,p); c.restore();
+712:         }
+713: 
+714:         void drawTrophyIcon(Canvas c,float x,float y,float r){
+715:             p.setColor(Color.rgb(235,169,29));
+716:             RectF cup=new RectF(x-r*.65f,y-r*.75f,x+r*.65f,y+r*.20f); c.drawRoundRect(cup,r*.18f,r*.18f,p);
+717:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(r*.25f); stroke.setColor(Color.rgb(235,169,29)); c.drawArc(new RectF(x-r*1.05f,y-r*.55f,x-r*.35f,y+r*.35f),70,220,false,stroke); c.drawArc(new RectF(x+r*.35f,y-r*.55f,x+r*1.05f,y+r*.35f),-110,220,false,stroke); stroke.setStyle(Paint.Style.FILL);
+718:             c.drawRect(x-r*.12f,y+r*.18f,x+r*.12f,y+r*.72f,p); c.drawRoundRect(new RectF(x-r*.55f,y+r*.62f,x+r*.55f,y+r*.85f),r*.10f,r*.10f,p);
+719:         }
+720: 
+721:         void drawSettings(Canvas c,float w,float h){
+722:             dim(c,w,h); float pw=w*.86f, ph=h*.62f, l=(w-pw)/2, t=h*.15f;
+
+--- around line 716 ---
+711:             c.drawCircle(0,0,r,p); p.setColor(Color.WHITE); c.drawCircle(0,0,r*.43f,p); c.restore();
+712:         }
+713: 
+714:         void drawTrophyIcon(Canvas c,float x,float y,float r){
+715:             p.setColor(Color.rgb(235,169,29));
+716:             RectF cup=new RectF(x-r*.65f,y-r*.75f,x+r*.65f,y+r*.20f); c.drawRoundRect(cup,r*.18f,r*.18f,p);
+717:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(r*.25f); stroke.setColor(Color.rgb(235,169,29)); c.drawArc(new RectF(x-r*1.05f,y-r*.55f,x-r*.35f,y+r*.35f),70,220,false,stroke); c.drawArc(new RectF(x+r*.35f,y-r*.55f,x+r*1.05f,y+r*.35f),-110,220,false,stroke); stroke.setStyle(Paint.Style.FILL);
+718:             c.drawRect(x-r*.12f,y+r*.18f,x+r*.12f,y+r*.72f,p); c.drawRoundRect(new RectF(x-r*.55f,y+r*.62f,x+r*.55f,y+r*.85f),r*.10f,r*.10f,p);
+719:         }
+720: 
+721:         void drawSettings(Canvas c,float w,float h){
+722:             dim(c,w,h); float pw=w*.86f, ph=h*.62f, l=(w-pw)/2, t=h*.15f;
+723:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+724:             text(c,"Nustatymai",l+w*.07f,t+h*.065f,w*.055f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+725:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+726: 
+727:             text(c,"Balsė",l+w*.07f,t+h*.13f,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+728:             float gap=w*.018f, bw=(pw-w*.14f-gap*5)/6f, by=t+h*.15f;
+
+--- around line 717 ---
+712:         }
+713: 
+714:         void drawTrophyIcon(Canvas c,float x,float y,float r){
+715:             p.setColor(Color.rgb(235,169,29));
+716:             RectF cup=new RectF(x-r*.65f,y-r*.75f,x+r*.65f,y+r*.20f); c.drawRoundRect(cup,r*.18f,r*.18f,p);
+717:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(r*.25f); stroke.setColor(Color.rgb(235,169,29)); c.drawArc(new RectF(x-r*1.05f,y-r*.55f,x-r*.35f,y+r*.35f),70,220,false,stroke); c.drawArc(new RectF(x+r*.35f,y-r*.55f,x+r*1.05f,y+r*.35f),-110,220,false,stroke); stroke.setStyle(Paint.Style.FILL);
+718:             c.drawRect(x-r*.12f,y+r*.18f,x+r*.12f,y+r*.72f,p); c.drawRoundRect(new RectF(x-r*.55f,y+r*.62f,x+r*.55f,y+r*.85f),r*.10f,r*.10f,p);
+719:         }
+720: 
+721:         void drawSettings(Canvas c,float w,float h){
+722:             dim(c,w,h); float pw=w*.86f, ph=h*.62f, l=(w-pw)/2, t=h*.15f;
+723:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+724:             text(c,"Nustatymai",l+w*.07f,t+h*.065f,w*.055f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+725:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+726: 
+727:             text(c,"Balsė",l+w*.07f,t+h*.13f,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+728:             float gap=w*.018f, bw=(pw-w*.14f-gap*5)/6f, by=t+h*.15f;
+729:             for(int i=0;i<6;i++){ float bx=l+w*.07f+i*(bw+gap); vowelBtns[i]=new RectF(bx,by,bx+bw,by+bw); p.setColor(i==vowel?Color.rgb(42,156,229):Color.rgb(235,242,247)); c.drawRoundRect(vowelBtns[i],bw*.25f,bw*.25f,p); text(c,vowels[i],vowelBtns[i].centerX(),vowelBtns[i].top+bw*.68f,w*.040f,i==vowel?Color.WHITE:Color.rgb(40,78,111),Paint.Align.CENTER,true); }
+
+--- around line 718 ---
+713: 
+714:         void drawTrophyIcon(Canvas c,float x,float y,float r){
+715:             p.setColor(Color.rgb(235,169,29));
+716:             RectF cup=new RectF(x-r*.65f,y-r*.75f,x+r*.65f,y+r*.20f); c.drawRoundRect(cup,r*.18f,r*.18f,p);
+717:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(r*.25f); stroke.setColor(Color.rgb(235,169,29)); c.drawArc(new RectF(x-r*1.05f,y-r*.55f,x-r*.35f,y+r*.35f),70,220,false,stroke); c.drawArc(new RectF(x+r*.35f,y-r*.55f,x+r*1.05f,y+r*.35f),-110,220,false,stroke); stroke.setStyle(Paint.Style.FILL);
+718:             c.drawRect(x-r*.12f,y+r*.18f,x+r*.12f,y+r*.72f,p); c.drawRoundRect(new RectF(x-r*.55f,y+r*.62f,x+r*.55f,y+r*.85f),r*.10f,r*.10f,p);
+719:         }
+720: 
+721:         void drawSettings(Canvas c,float w,float h){
+722:             dim(c,w,h); float pw=w*.86f, ph=h*.62f, l=(w-pw)/2, t=h*.15f;
+723:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+724:             text(c,"Nustatymai",l+w*.07f,t+h*.065f,w*.055f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+725:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+726: 
+727:             text(c,"Balsė",l+w*.07f,t+h*.13f,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+728:             float gap=w*.018f, bw=(pw-w*.14f-gap*5)/6f, by=t+h*.15f;
+729:             for(int i=0;i<6;i++){ float bx=l+w*.07f+i*(bw+gap); vowelBtns[i]=new RectF(bx,by,bx+bw,by+bw); p.setColor(i==vowel?Color.rgb(42,156,229):Color.rgb(235,242,247)); c.drawRoundRect(vowelBtns[i],bw*.25f,bw*.25f,p); text(c,vowels[i],vowelBtns[i].centerX(),vowelBtns[i].top+bw*.68f,w*.040f,i==vowel?Color.WHITE:Color.rgb(40,78,111),Paint.Align.CENTER,true); }
+730: 
+
+--- around line 721 ---
+716:             RectF cup=new RectF(x-r*.65f,y-r*.75f,x+r*.65f,y+r*.20f); c.drawRoundRect(cup,r*.18f,r*.18f,p);
+717:             stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(r*.25f); stroke.setColor(Color.rgb(235,169,29)); c.drawArc(new RectF(x-r*1.05f,y-r*.55f,x-r*.35f,y+r*.35f),70,220,false,stroke); c.drawArc(new RectF(x+r*.35f,y-r*.55f,x+r*1.05f,y+r*.35f),-110,220,false,stroke); stroke.setStyle(Paint.Style.FILL);
+718:             c.drawRect(x-r*.12f,y+r*.18f,x+r*.12f,y+r*.72f,p); c.drawRoundRect(new RectF(x-r*.55f,y+r*.62f,x+r*.55f,y+r*.85f),r*.10f,r*.10f,p);
+719:         }
+720: 
+721:         void drawSettings(Canvas c,float w,float h){
+722:             dim(c,w,h); float pw=w*.86f, ph=h*.62f, l=(w-pw)/2, t=h*.15f;
+723:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+724:             text(c,"Nustatymai",l+w*.07f,t+h*.065f,w*.055f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+725:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+726: 
+727:             text(c,"Balsė",l+w*.07f,t+h*.13f,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+728:             float gap=w*.018f, bw=(pw-w*.14f-gap*5)/6f, by=t+h*.15f;
+729:             for(int i=0;i<6;i++){ float bx=l+w*.07f+i*(bw+gap); vowelBtns[i]=new RectF(bx,by,bx+bw,by+bw); p.setColor(i==vowel?Color.rgb(42,156,229):Color.rgb(235,242,247)); c.drawRoundRect(vowelBtns[i],bw*.25f,bw*.25f,p); text(c,vowels[i],vowelBtns[i].centerX(),vowelBtns[i].top+bw*.68f,w*.040f,i==vowel?Color.WHITE:Color.rgb(40,78,111),Paint.Align.CENTER,true); }
+730: 
+731:             float y1=by+bw+h*.055f;
+732:             text(c,"Mikrofonas",l+w*.07f,y1,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+733:             micBtn.set(l+w*.07f,y1+h*.025f,l+pw-w*.07f,y1+h*.09f);
+
+--- around line 724 ---
+719:         }
+720: 
+721:         void drawSettings(Canvas c,float w,float h){
+722:             dim(c,w,h); float pw=w*.86f, ph=h*.62f, l=(w-pw)/2, t=h*.15f;
+723:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+724:             text(c,"Nustatymai",l+w*.07f,t+h*.065f,w*.055f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+725:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+726: 
+727:             text(c,"Balsė",l+w*.07f,t+h*.13f,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+728:             float gap=w*.018f, bw=(pw-w*.14f-gap*5)/6f, by=t+h*.15f;
+729:             for(int i=0;i<6;i++){ float bx=l+w*.07f+i*(bw+gap); vowelBtns[i]=new RectF(bx,by,bx+bw,by+bw); p.setColor(i==vowel?Color.rgb(42,156,229):Color.rgb(235,242,247)); c.drawRoundRect(vowelBtns[i],bw*.25f,bw*.25f,p); text(c,vowels[i],vowelBtns[i].centerX(),vowelBtns[i].top+bw*.68f,w*.040f,i==vowel?Color.WHITE:Color.rgb(40,78,111),Paint.Align.CENTER,true); }
+730: 
+731:             float y1=by+bw+h*.055f;
+732:             text(c,"Mikrofonas",l+w*.07f,y1,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+733:             micBtn.set(l+w*.07f,y1+h*.025f,l+pw-w*.07f,y1+h*.09f);
+734:             p.setColor(micOn?Color.rgb(52,194,82):Color.rgb(190,199,208)); c.drawRoundRect(micBtn,h*.018f,h*.018f,p);
+735:             text(c,micOn?"Mikrofonas įjungtas":"Mikrofonas išjungtas",micBtn.centerX(),micBtn.top+micBtn.height()*.66f,w*.035f,Color.WHITE,Paint.Align.CENTER,true);
+736: 
+
+--- around line 729 ---
+724:             text(c,"Nustatymai",l+w*.07f,t+h*.065f,w*.055f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+725:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+726: 
+727:             text(c,"Balsė",l+w*.07f,t+h*.13f,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+728:             float gap=w*.018f, bw=(pw-w*.14f-gap*5)/6f, by=t+h*.15f;
+729:             for(int i=0;i<6;i++){ float bx=l+w*.07f+i*(bw+gap); vowelBtns[i]=new RectF(bx,by,bx+bw,by+bw); p.setColor(i==vowel?Color.rgb(42,156,229):Color.rgb(235,242,247)); c.drawRoundRect(vowelBtns[i],bw*.25f,bw*.25f,p); text(c,vowels[i],vowelBtns[i].centerX(),vowelBtns[i].top+bw*.68f,w*.040f,i==vowel?Color.WHITE:Color.rgb(40,78,111),Paint.Align.CENTER,true); }
+730: 
+731:             float y1=by+bw+h*.055f;
+732:             text(c,"Mikrofonas",l+w*.07f,y1,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+733:             micBtn.set(l+w*.07f,y1+h*.025f,l+pw-w*.07f,y1+h*.09f);
+734:             p.setColor(micOn?Color.rgb(52,194,82):Color.rgb(190,199,208)); c.drawRoundRect(micBtn,h*.018f,h*.018f,p);
+735:             text(c,micOn?"Mikrofonas įjungtas":"Mikrofonas išjungtas",micBtn.centerX(),micBtn.top+micBtn.height()*.66f,w*.035f,Color.WHITE,Paint.Align.CENTER,true);
+736: 
+737:             float y2=micBtn.bottom+h*.045f;
+738:             text(c,"Kalibravimas",l+w*.07f,y2,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+739:             calBtn.set(l+w*.07f,y2+h*.025f,l+pw-w*.07f,y2+h*.10f);
+740:             p.setColor(Color.rgb(244,183,54)); c.drawRoundRect(calBtn,h*.018f,h*.018f,p);
+741:             text(c,calibrating?"Kalibruojama...":"Kalibruoti mikrofoną iki 85 dB",calBtn.centerX(),calBtn.top+calBtn.height()*.66f,w*.033f,Color.rgb(77,55,12),Paint.Align.CENTER,true);
+
+--- around line 738 ---
+733:             micBtn.set(l+w*.07f,y1+h*.025f,l+pw-w*.07f,y1+h*.09f);
+734:             p.setColor(micOn?Color.rgb(52,194,82):Color.rgb(190,199,208)); c.drawRoundRect(micBtn,h*.018f,h*.018f,p);
+735:             text(c,micOn?"Mikrofonas įjungtas":"Mikrofonas išjungtas",micBtn.centerX(),micBtn.top+micBtn.height()*.66f,w*.035f,Color.WHITE,Paint.Align.CENTER,true);
+736: 
+737:             float y2=micBtn.bottom+h*.045f;
+738:             text(c,"Kalibravimas",l+w*.07f,y2,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+739:             calBtn.set(l+w*.07f,y2+h*.025f,l+pw-w*.07f,y2+h*.10f);
+740:             p.setColor(Color.rgb(244,183,54)); c.drawRoundRect(calBtn,h*.018f,h*.018f,p);
+741:             text(c,calibrating?"Kalibruojama...":"Kalibruoti mikrofoną iki 85 dB",calBtn.centerX(),calBtn.top+calBtn.height()*.66f,w*.033f,Color.rgb(77,55,12),Paint.Align.CENTER,true);
+742:             text(c,"Kalbėk įprastu balsu apie 2 sek.",l+w*.07f,calBtn.bottom+h*.035f,w*.027f,Color.rgb(103,117,129),Paint.Align.LEFT,false);
+743:         }
+744: 
+745:         void drawLeaderboard(Canvas c,float w,float h){
+746:             dim(c,w,h); float pw=w*.88f, ph=h*.69f, l=(w-pw)/2, t=h*.11f;
+747:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+748:             text(c,"Geriausi skrydžiai",l+w*.07f,t+h*.065f,w*.052f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+749:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+750:             String[] tabs={"Diena","Savaitė","Mėnuo"};
+
+--- around line 739 ---
+734:             p.setColor(micOn?Color.rgb(52,194,82):Color.rgb(190,199,208)); c.drawRoundRect(micBtn,h*.018f,h*.018f,p);
+735:             text(c,micOn?"Mikrofonas įjungtas":"Mikrofonas išjungtas",micBtn.centerX(),micBtn.top+micBtn.height()*.66f,w*.035f,Color.WHITE,Paint.Align.CENTER,true);
+736: 
+737:             float y2=micBtn.bottom+h*.045f;
+738:             text(c,"Kalibravimas",l+w*.07f,y2,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+739:             calBtn.set(l+w*.07f,y2+h*.025f,l+pw-w*.07f,y2+h*.10f);
+740:             p.setColor(Color.rgb(244,183,54)); c.drawRoundRect(calBtn,h*.018f,h*.018f,p);
+741:             text(c,calibrating?"Kalibruojama...":"Kalibruoti mikrofoną iki 85 dB",calBtn.centerX(),calBtn.top+calBtn.height()*.66f,w*.033f,Color.rgb(77,55,12),Paint.Align.CENTER,true);
+742:             text(c,"Kalbėk įprastu balsu apie 2 sek.",l+w*.07f,calBtn.bottom+h*.035f,w*.027f,Color.rgb(103,117,129),Paint.Align.LEFT,false);
+743:         }
+744: 
+745:         void drawLeaderboard(Canvas c,float w,float h){
+746:             dim(c,w,h); float pw=w*.88f, ph=h*.69f, l=(w-pw)/2, t=h*.11f;
+747:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+748:             text(c,"Geriausi skrydžiai",l+w*.07f,t+h*.065f,w*.052f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+749:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+750:             String[] tabs={"Diena","Savaitė","Mėnuo"};
+751:             float tabY=t+h*.11f, gap=w*.015f, tw=(pw-w*.14f-gap*2)/3f;
+
+--- around line 740 ---
+735:             text(c,micOn?"Mikrofonas įjungtas":"Mikrofonas išjungtas",micBtn.centerX(),micBtn.top+micBtn.height()*.66f,w*.035f,Color.WHITE,Paint.Align.CENTER,true);
+736: 
+737:             float y2=micBtn.bottom+h*.045f;
+738:             text(c,"Kalibravimas",l+w*.07f,y2,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+739:             calBtn.set(l+w*.07f,y2+h*.025f,l+pw-w*.07f,y2+h*.10f);
+740:             p.setColor(Color.rgb(244,183,54)); c.drawRoundRect(calBtn,h*.018f,h*.018f,p);
+741:             text(c,calibrating?"Kalibruojama...":"Kalibruoti mikrofoną iki 85 dB",calBtn.centerX(),calBtn.top+calBtn.height()*.66f,w*.033f,Color.rgb(77,55,12),Paint.Align.CENTER,true);
+742:             text(c,"Kalbėk įprastu balsu apie 2 sek.",l+w*.07f,calBtn.bottom+h*.035f,w*.027f,Color.rgb(103,117,129),Paint.Align.LEFT,false);
+743:         }
+744: 
+745:         void drawLeaderboard(Canvas c,float w,float h){
+746:             dim(c,w,h); float pw=w*.88f, ph=h*.69f, l=(w-pw)/2, t=h*.11f;
+747:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+748:             text(c,"Geriausi skrydžiai",l+w*.07f,t+h*.065f,w*.052f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+749:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+750:             String[] tabs={"Diena","Savaitė","Mėnuo"};
+751:             float tabY=t+h*.11f, gap=w*.015f, tw=(pw-w*.14f-gap*2)/3f;
+752:             for(int i=0;i<3;i++){ float x=l+w*.07f+i*(tw+gap); tabBtns[i]=new RectF(x,tabY,x+tw,tabY+h*.065f); p.setColor(i==leaderboardTab?Color.rgb(42,156,229):Color.rgb(234,241,247)); c.drawRoundRect(tabBtns[i],h*.018f,h*.018f,p); text(c,tabs[i],tabBtns[i].centerX(),tabBtns[i].top+tabBtns[i].height()*.66f,w*.031f,i==leaderboardTab?Color.WHITE:Color.rgb(48,83,112),Paint.Align.CENTER,true); }
+
+--- around line 741 ---
+736: 
+737:             float y2=micBtn.bottom+h*.045f;
+738:             text(c,"Kalibravimas",l+w*.07f,y2,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+739:             calBtn.set(l+w*.07f,y2+h*.025f,l+pw-w*.07f,y2+h*.10f);
+740:             p.setColor(Color.rgb(244,183,54)); c.drawRoundRect(calBtn,h*.018f,h*.018f,p);
+741:             text(c,calibrating?"Kalibruojama...":"Kalibruoti mikrofoną iki 85 dB",calBtn.centerX(),calBtn.top+calBtn.height()*.66f,w*.033f,Color.rgb(77,55,12),Paint.Align.CENTER,true);
+742:             text(c,"Kalbėk įprastu balsu apie 2 sek.",l+w*.07f,calBtn.bottom+h*.035f,w*.027f,Color.rgb(103,117,129),Paint.Align.LEFT,false);
+743:         }
+744: 
+745:         void drawLeaderboard(Canvas c,float w,float h){
+746:             dim(c,w,h); float pw=w*.88f, ph=h*.69f, l=(w-pw)/2, t=h*.11f;
+747:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+748:             text(c,"Geriausi skrydžiai",l+w*.07f,t+h*.065f,w*.052f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+749:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+750:             String[] tabs={"Diena","Savaitė","Mėnuo"};
+751:             float tabY=t+h*.11f, gap=w*.015f, tw=(pw-w*.14f-gap*2)/3f;
+752:             for(int i=0;i<3;i++){ float x=l+w*.07f+i*(tw+gap); tabBtns[i]=new RectF(x,tabY,x+tw,tabY+h*.065f); p.setColor(i==leaderboardTab?Color.rgb(42,156,229):Color.rgb(234,241,247)); c.drawRoundRect(tabBtns[i],h*.018f,h*.018f,p); text(c,tabs[i],tabBtns[i].centerX(),tabBtns[i].top+tabBtns[i].height()*.66f,w*.031f,i==leaderboardTab?Color.WHITE:Color.rgb(48,83,112),Paint.Align.CENTER,true); }
+753: 
+
+--- around line 742 ---
+737:             float y2=micBtn.bottom+h*.045f;
+738:             text(c,"Kalibravimas",l+w*.07f,y2,w*.034f,Color.rgb(67,83,99),Paint.Align.LEFT,true);
+739:             calBtn.set(l+w*.07f,y2+h*.025f,l+pw-w*.07f,y2+h*.10f);
+740:             p.setColor(Color.rgb(244,183,54)); c.drawRoundRect(calBtn,h*.018f,h*.018f,p);
+741:             text(c,calibrating?"Kalibruojama...":"Kalibruoti mikrofoną iki 85 dB",calBtn.centerX(),calBtn.top+calBtn.height()*.66f,w*.033f,Color.rgb(77,55,12),Paint.Align.CENTER,true);
+742:             text(c,"Kalbėk įprastu balsu apie 2 sek.",l+w*.07f,calBtn.bottom+h*.035f,w*.027f,Color.rgb(103,117,129),Paint.Align.LEFT,false);
+743:         }
+744: 
+745:         void drawLeaderboard(Canvas c,float w,float h){
+746:             dim(c,w,h); float pw=w*.88f, ph=h*.69f, l=(w-pw)/2, t=h*.11f;
+747:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+748:             text(c,"Geriausi skrydžiai",l+w*.07f,t+h*.065f,w*.052f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+749:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+750:             String[] tabs={"Diena","Savaitė","Mėnuo"};
+751:             float tabY=t+h*.11f, gap=w*.015f, tw=(pw-w*.14f-gap*2)/3f;
+752:             for(int i=0;i<3;i++){ float x=l+w*.07f+i*(tw+gap); tabBtns[i]=new RectF(x,tabY,x+tw,tabY+h*.065f); p.setColor(i==leaderboardTab?Color.rgb(42,156,229):Color.rgb(234,241,247)); c.drawRoundRect(tabBtns[i],h*.018f,h*.018f,p); text(c,tabs[i],tabBtns[i].centerX(),tabBtns[i].top+tabBtns[i].height()*.66f,w*.031f,i==leaderboardTab?Color.WHITE:Color.rgb(48,83,112),Paint.Align.CENTER,true); }
+753: 
+754:             ArrayList<FlightRecord> list=getTopRecords(leaderboardTab);
+
+--- around line 752 ---
+747:             panelCard(c,l,t,l+pw,t+ph,w*.045f);
+748:             text(c,"Geriausi skrydžiai",l+w*.07f,t+h*.065f,w*.052f,Color.rgb(18,73,129),Paint.Align.LEFT,true);
+749:             closeBtn.set(l+pw-w*.13f,t+w*.035f,l+pw-w*.035f,t+w*.13f); drawClose(c,closeBtn);
+750:             String[] tabs={"Diena","Savaitė","Mėnuo"};
+751:             float tabY=t+h*.11f, gap=w*.015f, tw=(pw-w*.14f-gap*2)/3f;
+752:             for(int i=0;i<3;i++){ float x=l+w*.07f+i*(tw+gap); tabBtns[i]=new RectF(x,tabY,x+tw,tabY+h*.065f); p.setColor(i==leaderboardTab?Color.rgb(42,156,229):Color.rgb(234,241,247)); c.drawRoundRect(tabBtns[i],h*.018f,h*.018f,p); text(c,tabs[i],tabBtns[i].centerX(),tabBtns[i].top+tabBtns[i].height()*.66f,w*.031f,i==leaderboardTab?Color.WHITE:Color.rgb(48,83,112),Paint.Align.CENTER,true); }
+753: 
+754:             ArrayList<FlightRecord> list=getTopRecords(leaderboardTab);
+755:             float sy=tabY+h*.105f;
+756:             if(list.isEmpty()){
+757:                 text(c,"Dar nėra skrydžių",w/2,sy+h*.13f,w*.038f,Color.rgb(107,120,132),Paint.Align.CENTER,true);
+758:                 text(c,"Atlik skrydį ir rezultatas atsiras čia.",w/2,sy+h*.18f,w*.026f,Color.rgb(125,136,147),Paint.Align.CENTER,false);
+759:             } else {
+760:                 for(int i=0;i<Math.min(5,list.size());i++){
+761:                     FlightRecord r=list.get(i); float yy=sy+i*h*.085f;
+762:                     p.setColor(i==0?Color.rgb(255,247,215):Color.rgb(246,249,251)); c.drawRoundRect(new RectF(l+w*.07f,yy,l+pw-w*.07f,yy+h*.067f),h*.016f,h*.016f,p);
+763:                     text(c,"#"+(i+1),l+w*.105f,yy+h*.043f,w*.032f,i==0?Color.rgb(192,135,24):Color.rgb(80,99,116),Paint.Align.CENTER,true);
+764:                     text(c,String.format(Locale.US,"%.0f m",r.meters),l+w*.20f,yy+h*.043f,w*.038f,Color.rgb(18,81,151),Paint.Align.LEFT,true);
+
+--- around line 762 ---
+757:                 text(c,"Dar nėra skrydžių",w/2,sy+h*.13f,w*.038f,Color.rgb(107,120,132),Paint.Align.CENTER,true);
+758:                 text(c,"Atlik skrydį ir rezultatas atsiras čia.",w/2,sy+h*.18f,w*.026f,Color.rgb(125,136,147),Paint.Align.CENTER,false);
+759:             } else {
+760:                 for(int i=0;i<Math.min(5,list.size());i++){
+761:                     FlightRecord r=list.get(i); float yy=sy+i*h*.085f;
+762:                     p.setColor(i==0?Color.rgb(255,247,215):Color.rgb(246,249,251)); c.drawRoundRect(new RectF(l+w*.07f,yy,l+pw-w*.07f,yy+h*.067f),h*.016f,h*.016f,p);
+763:                     text(c,"#"+(i+1),l+w*.105f,yy+h*.043f,w*.032f,i==0?Color.rgb(192,135,24):Color.rgb(80,99,116),Paint.Align.CENTER,true);
+764:                     text(c,String.format(Locale.US,"%.0f m",r.meters),l+w*.20f,yy+h*.043f,w*.038f,Color.rgb(18,81,151),Paint.Align.LEFT,true);
+765:                     text(c,String.format(Locale.US,"%.1f s",r.seconds),l+pw-w*.105f,yy+h*.043f,w*.030f,Color.rgb(85,100,114),Paint.Align.RIGHT,true);
+766:                 }
+767:             }
+768:         }
+769: 
+770:         void drawResults(Canvas c,float w,float h){
+771:             dim(c,w,h); float pw=w*.82f, ph=h*.42f, l=(w-pw)/2, t=h*.27f;
+772:             panelCard(c,l,t,l+pw,t+ph,w*.05f);
+773:             drawTrophyIcon(c,w/2,t+h*.075f,w*.055f);
+774:             text(c,"Skrydis baigtas!",w/2,t+h*.145f,w*.052f,Color.rgb(18,73,129),Paint.Align.CENTER,true);
+
+--- around line 783 ---
+778:             text(c,String.format(Locale.US,"%.1f s",lastResultTime),l+pw-w*.10f,t+h*.28f,w*.045f,Color.rgb(20,91,170),Paint.Align.RIGHT,true);
+779:             restartBtn.set(l+w*.10f,t+h*.325f,l+pw-w*.10f,t+h*.39f); p.setColor(Color.rgb(51,194,77)); c.drawRoundRect(restartBtn,h*.018f,h*.018f,p); text(c,"Pradėti iš naujo",restartBtn.centerX(),restartBtn.top+restartBtn.height()*.66f,w*.037f,Color.WHITE,Paint.Align.CENTER,true);
+780:         }
+781: 
+782:         void dim(Canvas c,float w,float h){ p.setColor(Color.argb(150,4,29,50)); c.drawRect(0,0,w,h,p); }
+783:         void panelCard(Canvas c,float l,float t,float r,float b,float rad){ p.setShadowLayer(rad*.55f,0,rad*.20f,Color.argb(65,0,0,0)); p.setColor(Color.WHITE); c.drawRoundRect(new RectF(l,t,r,b),rad,rad,p); p.clearShadowLayer(); }
+784:         void drawClose(Canvas c,RectF b){ p.setColor(Color.rgb(237,242,246)); c.drawRoundRect(b,b.width()*.3f,b.width()*.3f,p); stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(b.width()*.075f); stroke.setColor(Color.rgb(73,91,108)); c.drawLine(b.left+b.width()*.30f,b.top+b.height()*.30f,b.right-b.width()*.30f,b.bottom-b.height()*.30f,stroke); c.drawLine(b.right-b.width()*.30f,b.top+b.height()*.30f,b.left+b.width()*.30f,b.bottom-b.height()*.30f,stroke); stroke.setStyle(Paint.Style.FILL); }
+785: 
+786:         void text(Canvas c,String s,float x,float y,float size,int color,Paint.Align align,boolean bold){ p.setShader(null); p.setStyle(Paint.Style.FILL); p.setColor(color); p.setTextSize(size); p.setTextAlign(align); p.setTypeface(Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL)); c.drawText(s,x,y,p); }
+787: 
+788:         @Override public boolean onTouchEvent(MotionEvent e){
+789:             if(e.getAction()!=MotionEvent.ACTION_UP) return true;
+790:             float x=e.getX(), y=e.getY();
+791:             if(showResults){ if(restartBtn.contains(x,y)) resetFlight(); return true; }
+792:             if(panel==1){
+793:                 if(closeBtn.contains(x,y)){panel=0;return true;}
+794:                 for(int i=0;i<6;i++) if(vowelBtns[i]!=null&&vowelBtns[i].contains(x,y)){vowel=i;prefs.edit().putInt("vowel",vowel).apply();message="Tark "+repeatVowel();return true;}
+795:                 if(micBtn.contains(x,y)){toggleMic();return true;}
+
+--- around line 784 ---
+779:             restartBtn.set(l+w*.10f,t+h*.325f,l+pw-w*.10f,t+h*.39f); p.setColor(Color.rgb(51,194,77)); c.drawRoundRect(restartBtn,h*.018f,h*.018f,p); text(c,"Pradėti iš naujo",restartBtn.centerX(),restartBtn.top+restartBtn.height()*.66f,w*.037f,Color.WHITE,Paint.Align.CENTER,true);
+780:         }
+781: 
+782:         void dim(Canvas c,float w,float h){ p.setColor(Color.argb(150,4,29,50)); c.drawRect(0,0,w,h,p); }
+783:         void panelCard(Canvas c,float l,float t,float r,float b,float rad){ p.setShadowLayer(rad*.55f,0,rad*.20f,Color.argb(65,0,0,0)); p.setColor(Color.WHITE); c.drawRoundRect(new RectF(l,t,r,b),rad,rad,p); p.clearShadowLayer(); }
+784:         void drawClose(Canvas c,RectF b){ p.setColor(Color.rgb(237,242,246)); c.drawRoundRect(b,b.width()*.3f,b.width()*.3f,p); stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(b.width()*.075f); stroke.setColor(Color.rgb(73,91,108)); c.drawLine(b.left+b.width()*.30f,b.top+b.height()*.30f,b.right-b.width()*.30f,b.bottom-b.height()*.30f,stroke); c.drawLine(b.right-b.width()*.30f,b.top+b.height()*.30f,b.left+b.width()*.30f,b.bottom-b.height()*.30f,stroke); stroke.setStyle(Paint.Style.FILL); }
+785: 
+786:         void text(Canvas c,String s,float x,float y,float size,int color,Paint.Align align,boolean bold){ p.setShader(null); p.setStyle(Paint.Style.FILL); p.setColor(color); p.setTextSize(size); p.setTextAlign(align); p.setTypeface(Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL)); c.drawText(s,x,y,p); }
+787: 
+788:         @Override public boolean onTouchEvent(MotionEvent e){
+789:             if(e.getAction()!=MotionEvent.ACTION_UP) return true;
+790:             float x=e.getX(), y=e.getY();
+791:             if(showResults){ if(restartBtn.contains(x,y)) resetFlight(); return true; }
+792:             if(panel==1){
+793:                 if(closeBtn.contains(x,y)){panel=0;return true;}
+794:                 for(int i=0;i<6;i++) if(vowelBtns[i]!=null&&vowelBtns[i].contains(x,y)){vowel=i;prefs.edit().putInt("vowel",vowel).apply();message="Tark "+repeatVowel();return true;}
+795:                 if(micBtn.contains(x,y)){toggleMic();return true;}
+796:                 if(calBtn.contains(x,y)){calibrate();return true;}
+
+--- around line 788 ---
+783:         void panelCard(Canvas c,float l,float t,float r,float b,float rad){ p.setShadowLayer(rad*.55f,0,rad*.20f,Color.argb(65,0,0,0)); p.setColor(Color.WHITE); c.drawRoundRect(new RectF(l,t,r,b),rad,rad,p); p.clearShadowLayer(); }
+784:         void drawClose(Canvas c,RectF b){ p.setColor(Color.rgb(237,242,246)); c.drawRoundRect(b,b.width()*.3f,b.width()*.3f,p); stroke.setStyle(Paint.Style.STROKE); stroke.setStrokeWidth(b.width()*.075f); stroke.setColor(Color.rgb(73,91,108)); c.drawLine(b.left+b.width()*.30f,b.top+b.height()*.30f,b.right-b.width()*.30f,b.bottom-b.height()*.30f,stroke); c.drawLine(b.right-b.width()*.30f,b.top+b.height()*.30f,b.left+b.width()*.30f,b.bottom-b.height()*.30f,stroke); stroke.setStyle(Paint.Style.FILL); }
+785: 
+786:         void text(Canvas c,String s,float x,float y,float size,int color,Paint.Align align,boolean bold){ p.setShader(null); p.setStyle(Paint.Style.FILL); p.setColor(color); p.setTextSize(size); p.setTextAlign(align); p.setTypeface(Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL)); c.drawText(s,x,y,p); }
+787: 
+788:         @Override public boolean onTouchEvent(MotionEvent e){
+789:             if(e.getAction()!=MotionEvent.ACTION_UP) return true;
+790:             float x=e.getX(), y=e.getY();
+791:             if(showResults){ if(restartBtn.contains(x,y)) resetFlight(); return true; }
+792:             if(panel==1){
+793:                 if(closeBtn.contains(x,y)){panel=0;return true;}
+794:                 for(int i=0;i<6;i++) if(vowelBtns[i]!=null&&vowelBtns[i].contains(x,y)){vowel=i;prefs.edit().putInt("vowel",vowel).apply();message="Tark "+repeatVowel();return true;}
+795:                 if(micBtn.contains(x,y)){toggleMic();return true;}
+796:                 if(calBtn.contains(x,y)){calibrate();return true;}
+797:                 return true;
+798:             }
+799:             if(panel==2){
+800:                 if(closeBtn.contains(x,y)){panel=0;return true;}
+
+--- around line 796 ---
+791:             if(showResults){ if(restartBtn.contains(x,y)) resetFlight(); return true; }
+792:             if(panel==1){
+793:                 if(closeBtn.contains(x,y)){panel=0;return true;}
+794:                 for(int i=0;i<6;i++) if(vowelBtns[i]!=null&&vowelBtns[i].contains(x,y)){vowel=i;prefs.edit().putInt("vowel",vowel).apply();message="Tark "+repeatVowel();return true;}
+795:                 if(micBtn.contains(x,y)){toggleMic();return true;}
+796:                 if(calBtn.contains(x,y)){calibrate();return true;}
+797:                 return true;
+798:             }
+799:             if(panel==2){
+800:                 if(closeBtn.contains(x,y)){panel=0;return true;}
+801:                 for(int i=0;i<3;i++) if(tabBtns[i]!=null&&tabBtns[i].contains(x,y)){leaderboardTab=i;return true;}
+802:                 return true;
+803:             }
+804:             if(gearBtn.contains(x,y)){panel=1;return true;}
+805:             if(trophyBtn.contains(x,y)){leaderboardTab=0;panel=2;return true;}
+806:             return true;
+807:         }
+808: 
