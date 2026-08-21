@@ -32,24 +32,24 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Apply v1.23 changes
-        run: python3 build_v123.py
+      - name: Apply v1.24 changes
+        run: python3 build_v124.py
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: BalsiuLektuvas-v1.23-APK
+          name: BalsiuLektuvas-v1.24-APK
           path: balsiu-apk/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish APK to branch
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p releases
-          cp app/build/outputs/apk/debug/app-debug.apk releases/BalsiuLektuvas-v1.23-debug.apk
-          base64 -w 0 app/build/outputs/apk/debug/app-debug.apk > releases/BalsiuLektuvas-v1.23-debug.apk.b64
+          cp app/build/outputs/apk/debug/app-debug.apk releases/BalsiuLektuvas-v1.24-debug.apk
+          base64 -w 0 app/build/outputs/apk/debug/app-debug.apk > releases/BalsiuLektuvas-v1.24-debug.apk.b64
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add balsiu-apk/releases/BalsiuLektuvas-v1.23-debug.apk balsiu-apk/releases/BalsiuLektuvas-v1.23-debug.apk.b64 balsiu-apk/inspect_v122.txt
-          git commit -m "Publish BalsiuLektuvas v1.23 inspection build [skip ci]" || exit 0
+          git add balsiu-apk/releases/BalsiuLektuvas-v1.24-debug.apk balsiu-apk/releases/BalsiuLektuvas-v1.24-debug.apk.b64
+          git commit -m "Publish BalsiuLektuvas v1.24 APK and base64 [skip ci]" || exit 0
           git push
