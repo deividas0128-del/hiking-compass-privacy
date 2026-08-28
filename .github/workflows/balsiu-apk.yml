@@ -32,7 +32,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Apply v1.25 changes
+      - name: Apply v1.26 changes
         run: |
           sed -i 's/drawPlane(c, px, py, ps, pitch, w, h)/drawPlane(c, px + sx, py + sy, ps, pitch, w, h)/g' build_v125.py
           python3 build_v125.py
@@ -41,26 +41,33 @@ jobs:
           import re
           p=Path('app/src/main/java/lt/deikai/balsiulektuvas/MainActivity.java')
           s=p.read_text(encoding='utf-8')
-          s=re.sub(r'world\s*\+=\s*airspeed\s*\*\s*dt\s*;', 'world += airspeed * dt * 1.45f;', s)
-          s=re.sub(r'meters\s*\+=\s*airspeed\s*\*\s*dt\s*\*\s*([^;]+);', r'meters += airspeed * dt * (\1) * 1.35f;', s)
+          # 5x faster visual travel than v1.25, while keeping aerodynamic lift/landing stable.
+          s=re.sub(r'world\s*\+=\s*airspeed\s*\*\s*dt\s*;', 'world += airspeed * dt * 7.25f;', s)
+          s=re.sub(r'meters\s*\+=\s*airspeed\s*\*\s*dt\s*\*\s*([^;]+);', r'meters += airspeed * dt * (\1) * 6.75f;', s)
           p.write_text(s,encoding='utf-8')
+
+          g=Path('app/build.gradle')
+          gs=g.read_text(encoding='utf-8')
+          gs=re.sub(r'versionCode\s+\d+', 'versionCode 26', gs)
+          gs=re.sub(r'versionName\s+"[^"]+"', 'versionName "1.26"', gs)
+          g.write_text(gs,encoding='utf-8')
           PY
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: BalsiuLektuvas-v1.25-APK
+          name: BalsiuLektuvas-v1.26-APK
           path: balsiu-apk/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish APK to branch
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p releases
-          cp app/build/outputs/apk/debug/app-debug.apk releases/BalsiuLektuvas-v1.25-debug.apk
-          base64 -w 0 app/build/outputs/apk/debug/app-debug.apk > releases/BalsiuLektuvas-v1.25-debug.apk.b64
+          cp app/build/outputs/apk/debug/app-debug.apk releases/BalsiuLektuvas-v1.26-debug.apk
+          base64 -w 0 app/build/outputs/apk/debug/app-debug.apk > releases/BalsiuLektuvas-v1.26-debug.apk.b64
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add balsiu-apk/releases/BalsiuLektuvas-v1.25-debug.apk balsiu-apk/releases/BalsiuLektuvas-v1.25-debug.apk.b64
-          git commit -m "Publish BalsiuLektuvas v1.25 APK and base64 [skip ci]" || exit 0
+          git add balsiu-apk/releases/BalsiuLektuvas-v1.26-debug.apk balsiu-apk/releases/BalsiuLektuvas-v1.26-debug.apk.b64
+          git commit -m "Publish BalsiuLektuvas v1.26 APK and base64 [skip ci]" || exit 0
           git push
