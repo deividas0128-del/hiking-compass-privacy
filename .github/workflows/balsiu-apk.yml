@@ -33,7 +33,18 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Apply v1.25 changes
-        run: python3 build_v125.py
+        run: |
+          sed -i 's/drawPlane(c, px, py, ps, pitch, w, h)/drawPlane(c, px + sx, py + sy, ps, pitch, w, h)/g' build_v125.py
+          python3 build_v125.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('app/src/main/java/lt/deikai/balsiulektuvas/MainActivity.java')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'world\s*\+=\s*airspeed\s*\*\s*dt\s*;', 'world += airspeed * dt * 1.45f;', s)
+          s=re.sub(r'meters\s*\+=\s*airspeed\s*\*\s*dt\s*\*\s*([^;]+);', r'meters += airspeed * dt * (\1) * 1.35f;', s)
+          p.write_text(s,encoding='utf-8')
+          PY
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
