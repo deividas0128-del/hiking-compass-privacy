@@ -32,42 +32,58 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Apply v1.26 changes
+      - name: Apply v1.27 changes
         run: |
           sed -i 's/drawPlane(c, px, py, ps, pitch, w, h)/drawPlane(c, px + sx, py + sy, ps, pitch, w, h)/g' build_v125.py
           python3 build_v125.py
           python3 - <<'PY'
           from pathlib import Path
           import re
+
           p=Path('app/src/main/java/lt/deikai/balsiulektuvas/MainActivity.java')
           s=p.read_text(encoding='utf-8')
-          # 5x faster visual travel than v1.25, while keeping aerodynamic lift/landing stable.
+
+          # Keep v1.26 five-times-faster travel without destabilising vertical aerodynamics.
           s=re.sub(r'world\s*\+=\s*airspeed\s*\*\s*dt\s*;', 'world += airspeed * dt * 7.25f;', s)
           s=re.sub(r'meters\s*\+=\s*airspeed\s*\*\s*dt\s*\*\s*([^;]+);', r'meters += airspeed * dt * (\1) * 6.75f;', s)
+
+          # Realistic aircraft attitude. Android Canvas positive rotation is nose-down for a right-facing aircraft.
+          # Therefore climbing (negative vy) produces a negative angle / nose-up,
+          # and descending (positive vy) produces a positive angle / nose-down.
+          pitch_code = '''float realisticPitchTarget = clamp((vy / Math.max(1f, h)) * 5.4f, -.17f, .19f);\n'''
+          pitch_code += '''            if (!landing && flightStarted && planeY > groundY - h * .035f && airspeed > 44f) realisticPitchTarget = -.115f;\n'''
+          pitch_code += '''            if (landing && planeY > groundY - h * .018f) realisticPitchTarget = .025f;\n'''
+          pitch_code += '''            pitch += (realisticPitchTarget - pitch) * Math.min(1f, 4.4f * dt);\n            '''
+
+          # Apply immediately before distance accumulation in both normal flight and landing branches.
+          s, pitch_count = re.subn(r'(?m)^(\s*)meters\s*\+=', lambda m: m.group(1) + pitch_code.replace('            ', m.group(1)) + 'meters +=', s)
+          if pitch_count < 2:
+              raise SystemExit(f'Expected at least 2 flight distance updates, found {pitch_count}')
+
           p.write_text(s,encoding='utf-8')
 
           g=Path('app/build.gradle')
           gs=g.read_text(encoding='utf-8')
-          gs=re.sub(r'versionCode\s+\d+', 'versionCode 26', gs)
-          gs=re.sub(r'versionName\s+"[^"]+"', 'versionName "1.26"', gs)
+          gs=re.sub(r'versionCode\s+\d+', 'versionCode 27', gs)
+          gs=re.sub(r'versionName\s+"[^"]+"', 'versionName "1.27"', gs)
           g.write_text(gs,encoding='utf-8')
           PY
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: BalsiuLektuvas-v1.26-APK
+          name: BalsiuLektuvas-v1.27-APK
           path: balsiu-apk/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
       - name: Publish APK to branch
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p releases
-          cp app/build/outputs/apk/debug/app-debug.apk releases/BalsiuLektuvas-v1.26-debug.apk
-          base64 -w 0 app/build/outputs/apk/debug/app-debug.apk > releases/BalsiuLektuvas-v1.26-debug.apk.b64
+          cp app/build/outputs/apk/debug/app-debug.apk releases/BalsiuLektuvas-v1.27-debug.apk
+          base64 -w 0 app/build/outputs/apk/debug/app-debug.apk > releases/BalsiuLektuvas-v1.27-debug.apk.b64
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add balsiu-apk/releases/BalsiuLektuvas-v1.26-debug.apk balsiu-apk/releases/BalsiuLektuvas-v1.26-debug.apk.b64
-          git commit -m "Publish BalsiuLektuvas v1.26 APK and base64 [skip ci]" || exit 0
+          git add balsiu-apk/releases/BalsiuLektuvas-v1.27-debug.apk balsiu-apk/releases/BalsiuLektuvas-v1.27-debug.apk.b64
+          git commit -m "Publish BalsiuLektuvas v1.27 APK and base64 [skip ci]" || exit 0
           git push
